@@ -1,0 +1,10 @@
+{
+    "esversion":6,
+    "node": true,
+    "undef": true,
+    "unused": true,
+    "strict": false,
+    "browser": true,
+    "couch": true,
+    "devel":true
+}
