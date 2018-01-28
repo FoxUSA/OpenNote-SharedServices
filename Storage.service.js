@@ -4,9 +4,10 @@
  */
 
 /**
- * //TODO update this for DI variables
  * Function that add storage Service options to this scope. Can be used with .apply or .call to export functionality to a given scope
- * @param  {[type]} syncConfig         - Map with options and callback properties
+ * @param   localStorage            - DI for localStorage
+ * @param   PouchDB                 - DI for PouchDB
+ * @param   syncConfig              - Map with options and callback properties
  */
 module.exports = function(localStorage, PouchDB,syncConfig) {
         var localDatabase = null;
