@@ -43,7 +43,7 @@ module.exports = function(storageService, eventEmitter) {
             storageService.database().put(map).then(saveCallback);
         };
 
-        this.getMap().then(addTags, function(err) {
+        methods.getMap().then(addTags, function(err) {
             if (err.status == 404)
                 return addTags({
                     tags: {}
@@ -55,43 +55,45 @@ module.exports = function(storageService, eventEmitter) {
     /**
      * Remove all tags for an id
      * @param id - the id to remove tags for
-     * @param callback - calls on sucessful return
+     * @return {Promise} -
      */
-    var deleteTagsFromMap = function(id, callback) {
-        this.getMap().then(function(map) {
-            //Remove all tags from array
-            for (var tag in map.tags) {
-                var index = map.tags[tag].indexOf(id);
-                if (index == -1)
-                    continue;
-                map.tags[tag].splice(index, 1);
-                if (!map.tags[tag].length)
-                    delete map.tags[tag];
-            }
+    var deleteTagsFromMap = function(id) {
+        return new Promise(function(resolve, reject) {
+            methods.getMap().then(function(map) {
+                //Remove all tags from array
+                for (var tag in map.tags) {
+                    var index = map.tags[tag].indexOf(id);
+                    if (index == -1)
+                        continue;
+                    map.tags[tag].splice(index, 1);
+                    if (!map.tags[tag].length)
+                        delete map.tags[tag];
+                }
 
-            //Save
-            storageService.database().put(map).then(function(response) {
-                if (!response.ok)
-                    throw response;
-                eventEmitter("tagsUpdated");
-                return callback();
+                //Save
+                storageService.database().put(map).then(function(response) {
+                    if (!response.ok)
+                        throw response;
+                    eventEmitter("tagsUpdated");
+                    return resolve();
+                });
+            }, function(err) {
+                if (err.status == 404)
+                    return resolve(); //Nothing found nothing to delete
+                return reject(err);
             });
-        }, function(err) {
-            if (err.status == 404)
-                return callback(); //Nothing found nothing to delete
-            throw err;
         });
     };
 
 
     //Exposed methods
-    return {
+    var methods = {
         /**
          * SaveNote
          * @param  {[type]} note Modified note to detect tags and delete
          */
         saveNote: function(note) {
-            deleteTagsFromMap(note._id, function() {
+            deleteTagsFromMap(note._id).then(function() {
                 var matches;
                 var output = [];
                 while ((matches = tagRegex.exec(note.note)))
@@ -108,9 +110,50 @@ module.exports = function(storageService, eventEmitter) {
          * @param  {[type]} note note object to delete
          */
         deleteNote: function(note){
-            deleteTagsFromMap(note._id,function(){});
+            deleteTagsFromMap(note._id);
         },
 
+        /**
+         * Delete a folder tree
+         * @param  folder - the folder doc to delete
+         */
+        deleteFolder: function(folder) {//TODO Needs to a promise
+            if (!folder._id) //Required
+                return;
+
+            var promises = [];
+
+            // Wrapper for Promise.all that will allow multiple batches of promises to be picked up by Promise.all. By defauly only the entires that exist when Promise.all is called. Enttries to the list ofter will be missed.
+            var recursiveAll = (array) => {
+                return Promise.all(array).then((result) => {
+                    if (result.length == array.length) // If no new promises were added, return the result
+                        return eventEmitter("tagsUpdated");
+
+                    return recursiveAll(array); // If new promises were added, re-evaluate the array.
+                });
+            };
+
+
+            // Recursive worker function
+            var internalFunction = function(folder){
+                promises.push(new Promise(function(resolve){
+                    storageService.loadFolderContents(folder._id, function(results) {
+                        results.rows.filter(storageService.noteFilter).forEach(function(note) {
+                            methods.deleteNote(note.doc);
+                        });
+
+                        results.rows.filter(storageService.folderFilter).forEach(function(subFolder) {
+                            internalFunction(subFolder.doc);
+                        });
+
+                        return resolve();
+                    });
+                }));
+            };
+
+            internalFunction(folder); //Start the engine
+            return recursiveAll(promises);
+        },
 
 
         /**
@@ -121,4 +164,6 @@ module.exports = function(storageService, eventEmitter) {
             return storageService.database().get("tagMap");
         }
     };
+
+    return methods;
 };
