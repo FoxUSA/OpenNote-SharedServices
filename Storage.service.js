@@ -82,12 +82,12 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
     };
 
     /**
-     * Poast method
+     * Post method
      * @param  {[type]} doc  - the doc to put
      * @return {Promise}     - when resolves returns the result
      */
     this.post = function(doc){
-        return localDatabase.poast(doc);
+        return localDatabase.post(doc);
     };
 
 
