@@ -40,7 +40,7 @@ module.exports = function(storageService, eventEmitter) {
             });
 
             map._id = "tagMap";
-            storageService.database().put(map).then(saveCallback);
+            storageService.put(map).then(saveCallback);
         };
 
         methods.getMap().then(addTags, function(err) {
@@ -71,7 +71,7 @@ module.exports = function(storageService, eventEmitter) {
                 }
 
                 //Save
-                storageService.database().put(map).then(function(response) {
+                storageService.put(map).then(function(response) {
                     if (!response.ok)
                         throw response;
                     eventEmitter("tagsUpdated");
@@ -124,8 +124,8 @@ module.exports = function(storageService, eventEmitter) {
             var promises = [];
 
             // Wrapper for Promise.all that will allow multiple batches of promises to be picked up by Promise.all. By defauly only the entires that exist when Promise.all is called. Enttries to the list ofter will be missed.
-            var recursiveAll = (array) => {
-                return Promise.all(array).then((result) => {
+            var recursiveAll = function(array) {
+                return Promise.all(array).then(function(result) {
                     if (result.length == array.length) // If no new promises were added, return the result
                         return eventEmitter("tagsUpdated");
 
@@ -137,7 +137,7 @@ module.exports = function(storageService, eventEmitter) {
             // Recursive worker function
             var internalFunction = function(folder){
                 promises.push(new Promise(function(resolve){
-                    storageService.loadFolderContents(folder._id, function(results) {
+                    storageService.loadFolderContents(folder._id).then(function(results) {
                         results.rows.filter(storageService.noteFilter).forEach(function(note) {
                             methods.deleteNote(note.doc);
                         });
@@ -161,7 +161,7 @@ module.exports = function(storageService, eventEmitter) {
          * @return - a promise that when resolves return the tag map
          */
         getMap: function() {
-            return storageService.database().get("tagMap");
+            return storageService.get("tagMap");
         }
     };
 
