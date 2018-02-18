@@ -39,6 +39,18 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
         //Create or find database
         localDatabase = new PouchDB(dbPath);
 
+        //Force the latest parentFolderID design doc by deleting conflicts if they exists
+        localDatabase.get("_design/parentFolderID",{conflicts: true}).then(function(doc){
+            if(!doc._conflicts)// No conflicts do nothing
+                return;
+            doc._conflicts.forEach(function(rev){
+                localDatabase.remove("_design/parentFolderID",rev);
+            });
+        }).catch(function(err) {
+            if (err.status != 404)//Ignore if the document doesnt exist
+                throw err;
+        });
+
         //Indexes
         localDatabase.put(createDesignDoc("parentFolderID", function(doc) {
             emit(doc.parentFolderID);
@@ -136,7 +148,7 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
      * @param folderID - the folder id to load the content folder
      * @return {Promise}     - when resolves returns the results
      */
-    this.loadFolderContents = function(folderID) {//TODO
+    this.loadFolderContents = function(folderID) {
         return  localDatabase.query("parentFolderID", {
             key: folderID,
             include_docs: true
