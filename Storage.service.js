@@ -261,7 +261,7 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
          */
         var orphanRemover = function() {
             for (var orphan in map) {
-                if (self.typeFilter(map[orphan], "folder"))
+                if (typeFilter(map[orphan], "folder"))
                     self.deleteFolder(map[orphan]);
                 else
                     localDatabase.remove(map[orphan].doc);
@@ -277,71 +277,13 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
     };
 
     /**
-     * @param doc - the doc we are looping through
-     * @param property - the property of the doc we want to compare
-     * @param searchString - the searchString to look for
-     */
-    var searchFilter = function(doc, property, searchString) {
-        if (doc[property])
-            return doc[property].toLowerCase().indexOf(searchString.toLowerCase()) > -1;
-        else
-            return false;
-    };
-
-    /**
-     * Search folder names
-     * @param searchString - the search string to use
-     * @param callback - the callback to return the data to
-     */
-    this.searchFolderNames = function(searchString, callback) {
-        localDatabase.query(function(doc, emit) {
-            emit(searchFilter(doc, "name", searchString));
-        }, {
-            key: true,
-            include_docs: true
-        }).then(function(results) {
-            callback(results.rows.filter(self.folderFilter));
-        });
-    };
-
-    /**
-     * Search note titles
-     * @param searchString - the search string to use
-     * @param callback - the callback to return the data to
-     */
-    this.searchNoteTitles = function(searchString, callback) {
-        localDatabase.query(function(doc, emit) {
-            emit(searchFilter(doc, "title", searchString));
-        }, {
-            key: true,
-            include_docs: true
-        }).then(function(results) {
-            callback(results.rows.filter(self.noteFilter));
-        });
-    };
-
-    /**
-     * Search note body
-     * @param searchString - the search string to use
-     * @param callback - the callback to return the data to
-     */
-    this.searchNoteBody = function(searchString, callback) {
-        localDatabase.query(function(doc, emit) {
-            emit(searchFilter(doc, "note", searchString));
-        }, {
-            key: true,
-            include_docs: true
-        }).then(function(results) {
-            callback(results.rows.filter(self.noteFilter));
-        });
-    };
-
-    /**
      * Filter out everything but a given type
      * @param object - the object to filter
      * @param type - the type to filter in
      */
-    this.typeFilter = function(object, type) {
+    var typeFilter = function(object, type) {
+        if(!object || !object.doc) // If for some reason we are filtering an empty list
+            return false;
         return object.doc.type == type;
     };
 
@@ -349,14 +291,14 @@ module.exports = function(localStorage, PouchDB, syncConfig, dbPath) {
      * Filter out everything but type folder
      */
     this.folderFilter = function(object) {
-        return self.typeFilter(object, "folder");
+        return typeFilter(object, "folder");
     };
 
     /**
      * Filter out everything but type note
      */
     this.noteFilter = function(object) {
-        return self.typeFilter(object, "note");
+        return typeFilter(object, "note");
     };
 
     //First time create database

@@ -117,7 +117,7 @@ module.exports = function(storageService, eventEmitter) {
          * Delete a folder tree
          * @param  folder - the folder doc to delete
          */
-        deleteFolder: function(folder) {//TODO Needs to a promise
+        deleteFolder: function(folder) {//TODO Needs to be a promise
             if (!folder._id) //Required
                 return;
 
